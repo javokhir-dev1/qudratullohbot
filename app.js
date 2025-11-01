@@ -130,7 +130,7 @@ bot.on("message", async (ctx) => {
 (async () => {
     try {
         await sequelize.authenticate();
-        await sequelize.sync({ force: true })
+        await sequelize.sync({ alter: true })
         console.log("connected to database");
         console.log("bot started successfully")
         bot.launch();
