@@ -6,6 +6,10 @@ const Message = sequelize.define("Message", {
         type: DataTypes.STRING,
         allowNull: false
     },
+    group_id: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
     caption: {
         type: DataTypes.STRING,
         allowNull: false

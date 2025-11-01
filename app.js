@@ -10,8 +10,9 @@ const User = require("./models/users.model")
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
 
-bot.start((ctx) => {
+bot.start(async (ctx) => {
     try {
+        console.log(await User.findAll())
         ctx.reply("Statistikani korish uchun:",
             Markup.inlineKeyboard([
                 [Markup.button.callback("Statistics", "get_statistics")]
@@ -23,30 +24,38 @@ bot.start((ctx) => {
     }
 });
 
-bot.action("get_statistics", async (ctx) => {
-    try {
-        await ctx.answerCbQuery();
+bot.command("soni", async (ctx) => {
+    const group_id = String(ctx.chat.id);
+    await sendStatistics(ctx, group_id)
+})
 
-        const users = await User.findAll()
+
+async function sendStatistics(ctx, group_id) {
+    try {
+        const users = await User.findAll({ where: { group_id } });
+        text = ""
 
         for (let i = 0; i < users.length; i++) {
-            const messages = await Message.findAll({ where: { user_id: users[i].user_id } })
+            const messages = await Message.findAll({ where: { user_id: users[i].user_id, group_id } });
+            const messageCount = messages.length;
 
-            const messageCount = messages.length
 
-            await ctx.reply(`👤 Username: ${users[i].username}\n🪪 First name: ${users[i].first_name}\n🆔 User ID: ${users[i].user_id}\n💬 Messages count: ${messageCount}`,
-                Markup.inlineKeyboard([
-                    [Markup.button.callback("user yuborgan habarlar", `get_messages_${users[i].user_id}`)]
-                ])
-            )
+            text += `👤 ${users[i].username}\n${messageCount}ta \n`
         }
 
-        await ctx.reply(`Barcha userlar soni: ${users.length}`)
+        await ctx.reply(text || "Userlar topilmadi");
     } catch (err) {
-        ctx.reply("statisticsni chiqarishda xatolik")
-        console.log(err)
+        console.log("Statisticsni chiqarishda xatolik:", err);
+        ctx.reply("Statisticsni chiqarishda xatolik yuz berdi ❌");
     }
+}
+
+bot.action("get_statistics", async (ctx) => {
+    await ctx.answerCbQuery();
+    const group_id = String(ctx.chat.id);
+    await sendStatistics(ctx, group_id);
 });
+
 
 bot.action(/get_messages_(\d+)/, async (ctx) => {
     try {
@@ -95,23 +104,21 @@ bot.on("message", async (ctx) => {
     try {
         if (ctx.chat.type == "group" || ctx.chat.type == "supergroup") {
             if (ctx.message.photo) {
-                console.log(ctx.message.message_id)
-                console.log(ctx.chat.id)
+                const group_id = String(ctx.chat.id)
                 const user = ctx.from
                 const user_id = String(user.id)
                 const first_name = user.first_name
-                const username = user.username || "malumot yoq"
+                const username = user.username || ""
 
                 const photo = ctx.message.photo.at(-1)
                 const file_id = photo.file_id
-                const caption = ctx.message.caption || "malumot yoq"
+                const caption = ctx.message.caption || ""
 
-                const userexists = await User.findOne({ where: { user_id: user_id } })
-
-                if (!userexists) {
-                    await User.create({ user_id, first_name, username })
-                }
-                await Message.create({ user_id, file_id, caption })
+                await User.findOrCreate({
+                    where: { user_id, group_id },
+                    defaults: { first_name, username }
+                });
+                await Message.create({ user_id, file_id, caption, group_id })
             }
         }
     } catch (err) {
@@ -123,7 +130,7 @@ bot.on("message", async (ctx) => {
 (async () => {
     try {
         await sequelize.authenticate();
-        await sequelize.sync({ alter: true })
+        await sequelize.sync({ force: true })
         console.log("connected to database");
         console.log("bot started successfully")
         bot.launch();
