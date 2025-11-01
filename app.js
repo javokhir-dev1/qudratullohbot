@@ -102,28 +102,32 @@ bot.action(/delete_message_(\d+)/, async (ctx) => {
 
 bot.on("message", async (ctx) => {
     try {
-        if (ctx.chat.type == "group" || ctx.chat.type == "supergroup") {
-            if (ctx.message.photo) {
-                const group_id = String(ctx.chat.id)
-                const user = ctx.from
-                const user_id = String(user.id)
-                const first_name = user.first_name
-                const username = user.username || ""
+        if (ctx.chat.type === "group" || ctx.chat.type === "supergroup") {
+            const msg = ctx.message;
 
-                const photo = ctx.message.photo.at(-1)
-                const file_id = photo.file_id
-                const caption = ctx.message.caption || ""
+            if (msg.photo) {
+
+                const group_id = String(ctx.chat.id);
+                const user = ctx.from;
+                const user_id = String(user.id);
+                const first_name = user.first_name;
+                const username = user.username || "";
+
+                const photo = msg.photo.at(-1);
+                const file_id = photo.file_id;
+                const caption = msg.caption || "";
 
                 await User.findOrCreate({
                     where: { user_id, group_id },
-                    defaults: { first_name, username }
+                    defaults: { first_name, username },
                 });
-                await Message.create({ user_id, file_id, caption, group_id })
+
+                await Message.create({ user_id, file_id, caption, group_id });
             }
         }
     } catch (err) {
-        ctx.reply("habarni qoshishda xatolik")
-        console.log(err)
+        console.log("habarni qoshishda xatolik:", err);
+        ctx.reply("habarni qoshishda xatolik");
     }
 });
 

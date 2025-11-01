@@ -18,6 +18,14 @@ const User = sequelize.define("User", {
         type: DataTypes.STRING,
         allowNull: false
     }
-});
+},
+    {
+        indexes: [
+            {
+                unique: true,
+                fields: ['user_id', 'group_id'], // 🔒 kombinatsiyani unique qiladi
+            },
+        ],
+    });
 
 module.exports = User;
